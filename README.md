@@ -17,7 +17,7 @@ It also shows sunrise and sunset (with compass bearings), solar noon and the sun
 
 ## Locations
 
-- Built-in presets for local birding spots (edit the `PRESETS` object in `index.html` to add your own).
+- Built-in presets, sorted alphabetically: Boston, Conowingo Dam, Denali National Park, Everglades National Park, Grand Teton National Park, Hawk Mountain, Miami, New York, Philadelphia, Valley Forge Park, and Yellowstone National Park. Edit the `PRESETS` object and the dropdown in `index.html` to add your own.
 - Or enter a US ZIP code, `latitude, longitude`, a place name, or a postal code.
 - Or tap "Use my current location".
 
@@ -32,6 +32,10 @@ It also shows sunrise and sunset (with compass bearings), solar noon and the sun
 - Assumes a flat horizon. Trees and hills change your real light.
 - Bearings are degrees clockwise from true north, not magnetic north.
 - Sunrise and sunset use -0.833° to account for atmospheric refraction.
+
+## Appearance
+
+The page uses a dark theme on every device.
 
 ## Run locally
 

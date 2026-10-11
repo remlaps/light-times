@@ -5,10 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Light Times by Sun Angle</title>
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --text:#1b1f24; --muted:#6a737d; --line:#dfe3e8; --accent:#1f3864; --accent-text:#fff; --hl:#e6eefc; --gold:#ffe9a8; --bird:#dff3e0; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#121417; --card:#1c2026; --text:#e8eaed; --muted:#98a0aa; --line:#2e343c; --accent:#6c9bff; --accent-text:#0b1020; --hl:#26344f; --gold:#4a3d12; --bird:#1f3a24; }
-  }
+  :root { color-scheme: dark; --bg:#121417; --card:#1c2026; --text:#e8eaed; --muted:#98a0aa; --line:#2e343c; --accent:#6c9bff; --accent-text:#0b1020; --hl:#26344f; --gold:#4a3d12; --bird:#1f3a24; }
   * { box-sizing: border-box; }
   body { margin:0; padding:12px; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, -apple-system, Arial, sans-serif; }
   main { max-width:560px; margin:0 auto; }
@@ -43,12 +40,17 @@
   <form class="card" id="form">
     <label for="preset">Location</label>
     <select id="preset">
-      <option value="wc">West Chester, PA</option>
+      <option value="bos">Boston, MA</option>
       <option value="cd">Conowingo Dam, MD</option>
+      <option value="den">Denali National Park, AK</option>
+      <option value="eg">Everglades National Park, FL</option>
+      <option value="gt">Grand Teton National Park, WY</option>
       <option value="hm">Hawk Mountain, PA</option>
-      <option value="sp">Stroud Preserve, PA</option>
-      <option value="gna">Gordon Natural Area, PA</option>
+      <option value="mia">Miami, FL</option>
+      <option value="nyc">New York, NY</option>
+      <option value="ph">Philadelphia, PA</option>
       <option value="vf">Valley Forge Park, PA</option>
+      <option value="ys">Yellowstone National Park, WY</option>
       <option value="custom">Other (enter below)</option>
     </select>
     <div id="customBox" hidden>
@@ -162,12 +164,17 @@ const PHASES = [
 
 // ---- UI ----
 const PRESETS = {
-  wc: { name: 'West Chester, PA', lat: 39.9606, lon: -75.6050, tz: 'America/New_York' },
-  cd: { name: 'Conowingo Dam, MD', lat: 39.6600, lon: -76.1750, tz: 'America/New_York' },
+  bos: { name: 'Boston, MA', lat: 42.3601, lon: -71.0589, tz: 'America/New_York' },
+  cd: { name: 'Conowingo Dam, MD', lat: 39.66, lon: -76.175, tz: 'America/New_York' },
+  den: { name: 'Denali National Park, AK', lat: 63.7292, lon: -148.8963, tz: 'America/Anchorage' },
+  eg: { name: 'Everglades National Park, FL', lat: 25.379, lon: -80.5851, tz: 'America/New_York' },
+  gt: { name: 'Grand Teton National Park, WY', lat: 43.7904, lon: -110.6818, tz: 'America/Denver' },
   hm: { name: 'Hawk Mountain Sanctuary, PA', lat: 40.6385, lon: -75.9998, tz: 'America/New_York' },
-  sp: { name: 'Stroud Preserve, PA', lat: 39.9537, lon: -75.6479, tz: 'America/New_York' },
-  gna: { name: 'Gordon Natural Area, PA', lat: 39.9352, lon: -75.5993, tz: 'America/New_York' },
+  mia: { name: 'Miami, FL', lat: 25.7617, lon: -80.1918, tz: 'America/New_York' },
+  nyc: { name: 'New York, NY', lat: 40.7128, lon: -74.006, tz: 'America/New_York' },
+  ph: { name: 'Philadelphia, PA', lat: 39.9526, lon: -75.1652, tz: 'America/New_York' },
   vf: { name: 'Valley Forge Park, PA', lat: 40.0983, lon: -75.4432, tz: 'America/New_York' },
+  ys: { name: 'Yellowstone National Park, WY', lat: 44.428, lon: -110.5885, tz: 'America/Denver' },
 };
 const $ = id => document.getElementById(id);
 const statusEl = $('status');
@@ -311,13 +318,13 @@ $('gps').addEventListener('click', () => {
   const now = new Date();
   const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
   $('date').value = p.get('date') || today;
-  let saved = '', fmt = '12', preset = 'wc';
-  try { saved = localStorage.getItem('lt-loc') || ''; fmt = localStorage.getItem('lt-fmt') || '12'; preset = localStorage.getItem('lt-preset') || 'wc'; } catch (e) {}
+  let saved = '', fmt = '12', preset = 'ph';
+  try { saved = localStorage.getItem('lt-loc') || ''; fmt = localStorage.getItem('lt-fmt') || '12'; preset = localStorage.getItem('lt-preset') || 'ph'; } catch (e) {}
   $('fmt').value = fmt;
   $('loc').value = p.get('loc') || saved;
   preset = p.get('preset') || preset;
-  $('preset').value = [...$('preset').options].some(o => o.value === preset) ? preset : 'wc';
-  if ($('preset').value === 'custom' && !$('loc').value) $('preset').value = 'wc';
+  $('preset').value = [...$('preset').options].some(o => o.value === preset) ? preset : 'ph';
+  if ($('preset').value === 'custom' && !$('loc').value) $('preset').value = 'ph';
   syncPreset();
   run();
 })();
