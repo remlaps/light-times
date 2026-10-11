@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light Times by Sun Angle</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1b1f24; --muted:#6a737d; --line:#dfe3e8; --accent:#1f3864; --accent-text:#fff; --hl:#e6eefc; --gold:#ffe9a8; --bird:#dff3e0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#121417; --card:#1c2026; --text:#e8eaed; --muted:#98a0aa; --line:#2e343c; --accent:#6c9bff; --accent-text:#0b1020; --hl:#26344f; --gold:#4a3d12; --bird:#1f3a24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:12px; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, -apple-system, Arial, sans-serif; }
+  main { max-width:560px; margin:0 auto; }
+  h1 { font-size:1.25rem; margin:4px 0 12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:12px; }
+  label { display:block; font-size:.85rem; color:var(--muted); margin:8px 0 4px; }
+  input, select, button { font:inherit; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
+  button { background:var(--accent); color:var(--accent-text); border:0; font-weight:600; margin-top:12px; }
+  button.secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); margin-top:8px; }
+  .row { display:flex; gap:8px; }
+  .row > div { flex:1; }
+  #status { font-size:.9rem; color:var(--muted); min-height:1.2em; margin-top:8px; }
+  #status.err { color:#c0392b; }
+  #place { font-weight:600; }
+  .meta { font-size:.85rem; color:var(--muted); }
+  table { width:100%; border-collapse:collapse; margin-top:8px; }
+  th, td { padding:8px 4px; text-align:center; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  th { font-size:.8rem; color:var(--muted); font-weight:600; }
+  td:first-child, th:first-child { text-align:left; }
+  td small { display:block; color:var(--muted); font-size:.75rem; }
+  tr.hl td { background:var(--hl); }
+  tr.gold td { background:var(--gold); }
+  tr.bird td { background:var(--bird); }
+  tr.sun td { font-weight:600; }
+  .foot { font-size:.78rem; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Light Times by Sun Angle</h1>
+
+  <form class="card" id="form">
+    <label for="preset">Location</label>
+    <select id="preset">
+      <option value="wc">West Chester, PA</option>
+      <option value="cd">Conowingo Dam, MD</option>
+      <option value="hm">Hawk Mountain, PA</option>
+      <option value="sp">Stroud Preserve, PA</option>
+      <option value="gna">Gordon Natural Area, PA</option>
+      <option value="vf">Valley Forge Park, PA</option>
+      <option value="custom">Other (enter below)</option>
+    </select>
+    <div id="customBox" hidden>
+      <label for="loc">ZIP, "lat, lon", or place / postal code</label>
+      <input id="loc" type="text" inputmode="text" autocomplete="off" placeholder="19382   or   39.96, -75.60   or   Paris, France">
+      <button type="button" class="secondary" id="gps">Use my current location</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="date">Date</label>
+        <input id="date" type="date">
+      </div>
+      <div>
+        <label for="fmt">Time format</label>
+        <select id="fmt"><option value="12">12-hour</option><option value="24">24-hour</option></select>
+      </div>
+    </div>
+    <label for="tod">Time of day (optional): sun direction and height at that time</label>
+    <input id="tod" type="time">
+    <button type="submit">Show times</button>
+    <div id="status"></div>
+  </form>
+
+  <section class="card" id="result" hidden>
+    <div id="place"></div>
+    <div class="meta" id="meta"></div>
+    <table>
+      <thead><tr><th>Phase</th><th>Morning</th><th>Evening</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="foot">Sun angle = altitude above the horizon (negative = below). Sunrise/sunset use -0.833° for refraction. Assumes a flat horizon; trees and hills shift your real light. Bird-in-flight window = sun +6° to +30° for clear-sky shots. Bearings are degrees clockwise from true north (not magnetic).</p>
+  </section>
+</main>
+
+<script>
+// ---------- Solar math (NOAA algorithm) ----------
+const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
+
+function sunParams(jd) {
+  const T = (jd - 2451545) / 36525;
+  const L0 = (280.46646 + T * (36000.76983 + 0.0003032 * T)) % 360;
+  const M = 357.52911 + T * (35999.05029 - 0.0001537 * T);
+  const e = 0.016708634 - T * (0.000042037 + 0.0000001267 * T);
+  const C = Math.sin(rad(M)) * (1.914602 - T * (0.004817 + 0.000014 * T))
+          + Math.sin(rad(2 * M)) * (0.019993 - 0.000101 * T)
+          + Math.sin(rad(3 * M)) * 0.000289;
+  const trueLong = L0 + C;
+  const omega = 125.04 - 1934.136 * T;
+  const lambda = trueLong - 0.00569 - 0.00478 * Math.sin(rad(omega));
+  const eps0 = 23 + (26 + (21.448 - T * (46.815 + T * (0.00059 - T * 0.001813))) / 60) / 60;
+  const eps = eps0 + 0.00256 * Math.cos(rad(omega));
+  const decl = deg(Math.asin(Math.sin(rad(eps)) * Math.sin(rad(lambda))));
+  const y = Math.tan(rad(eps / 2)) ** 2;
+  const eqTime = 4 * deg(
+      y * Math.sin(2 * rad(L0))
+    - 2 * e * Math.sin(rad(M))
+    + 4 * e * y * Math.sin(rad(M)) * Math.cos(2 * rad(L0))
+    - 0.5 * y * y * Math.sin(4 * rad(L0))
+    - 1.25 * e * e * Math.sin(2 * rad(M)));
+  return { decl, eqTime };
+}
+
+// y,m,d = calendar date; returns helpers working in minutes from 0h UTC of that date
+function solarDay(y, m, d, lat, lon) {
+  const dayStart = Date.UTC(y, m - 1, d);
+  const jd0 = dayStart / 86400000 + 2440587.5;
+  let noon = 720 - 4 * lon;
+  for (let i = 0; i < 3; i++) noon = 720 - 4 * lon - sunParams(jd0 + noon / 1440).eqTime;
+
+  function crossing(elev, rising) {
+    let t = noon;
+    for (let i = 0; i < 4; i++) {
+      const { decl } = sunParams(jd0 + t / 1440);
+      const c = (Math.sin(rad(elev)) - Math.sin(rad(lat)) * Math.sin(rad(decl)))
+              / (Math.cos(rad(lat)) * Math.cos(rad(decl)));
+      if (c < -1 || c > 1) return null;      // sun never reaches this angle today
+      const ha = deg(Math.acos(c));
+      t = noon + (rising ? -4 * ha : 4 * ha);
+    }
+    return new Date(dayStart + t * 60000);
+  }
+  return { noon: new Date(dayStart + noon * 60000), crossing };
+}
+
+// Sun altitude and compass bearing (degrees clockwise from north) at an instant
+function sunPos(date, lat, lon) {
+  const jd = date.getTime() / 86400000 + 2440587.5;
+  const { decl, eqTime } = sunParams(jd);
+  const utcMin = (date.getTime() % 86400000) / 60000;
+  const H = rad(((utcMin + eqTime + 4 * lon) / 4 - 180) % 360);
+  const phi = rad(lat), dl = rad(decl);
+  const alt = deg(Math.asin(Math.sin(phi) * Math.sin(dl) + Math.cos(phi) * Math.cos(dl) * Math.cos(H)));
+  const az = (deg(Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(dl) * Math.cos(phi))) + 180 + 360) % 360;
+  return { alt, az };
+}
+const DIRS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+const compass = az => DIRS[Math.round(az / 22.5) % 16];
+
+// ---------- Phases ----------
+const SUN_ELEV = -0.833; // apparent sunrise/sunset (includes refraction + solar disc)
+// [label, angle text, morning start elev, morning end elev]; evening is the mirror image
+const PHASES = [
+  ['Astronomical twilight', '-18° to -12°', -18, -12],
+  ['Nautical twilight',     '-12° to -6°',  -12, -6],
+  ['Civil twilight',        '-6° to 0°',    -6,  SUN_ELEV],
+  ['Blue hour',             '-6° to -4°',   -6,  -4],
+  ['Golden hour',           '-4° to +6°',   -4,  6],
+  ['Bird-in-flight window', '+6° to +30°',  6,   30],
+];
+
+// ---- UI ----
+const PRESETS = {
+  wc: { name: 'West Chester, PA', lat: 39.9606, lon: -75.6050, tz: 'America/New_York' },
+  cd: { name: 'Conowingo Dam, MD', lat: 39.6600, lon: -76.1750, tz: 'America/New_York' },
+  hm: { name: 'Hawk Mountain Sanctuary, PA', lat: 40.6385, lon: -75.9998, tz: 'America/New_York' },
+  sp: { name: 'Stroud Preserve, PA', lat: 39.9537, lon: -75.6479, tz: 'America/New_York' },
+  gna: { name: 'Gordon Natural Area, PA', lat: 39.9352, lon: -75.5993, tz: 'America/New_York' },
+  vf: { name: 'Valley Forge Park, PA', lat: 40.0983, lon: -75.4432, tz: 'America/New_York' },
+};
+const $ = id => document.getElementById(id);
+const statusEl = $('status');
+function setStatus(msg, err) { statusEl.textContent = msg || ''; statusEl.className = err ? 'err' : ''; }
+
+function fmtTime(date, tz) {
+  if (!date) return '—';
+  const h12 = $('fmt').value === '12';
+  const t = new Date(date.getTime() + 30000); // round to nearest minute
+  return new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: h12, hourCycle: h12 ? 'h12' : 'h23' }).format(t);
+}
+
+function tzOffsetMs(date, tz) {
+  const parts = {};
+  for (const p of new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }).formatToParts(date)) parts[p.type] = +p.value;
+  return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second) - Math.floor(date.getTime() / 1000) * 1000;
+}
+function localToDate(y, m, d, hh, mm, tz) {
+  const base = Date.UTC(y, m - 1, d, hh, mm);
+  let t = base;
+  for (let i = 0; i < 3; i++) t = base - tzOffsetMs(new Date(t), tz);
+  return new Date(t);
+}
+
+async function getJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Lookup failed (' + r.status + ')');
+  return r.json();
+}
+
+async function resolveLocation(text) {
+  text = text.trim();
+  if (!text) throw new Error('Enter a ZIP, coordinates, or place.');
+
+  const ll = text.match(/^(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)$/);
+  if (ll) {
+    const lat = parseFloat(ll[1]), lon = parseFloat(ll[2]);
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new Error('Latitude must be within ±90 and longitude within ±180.');
+    return { lat, lon, name: lat.toFixed(4) + ', ' + lon.toFixed(4) };
+  }
+
+  const zip = text.match(/^(\d{5})(?:-\d{4})?$/);
+  if (zip) {
+    try {
+      const z = await getJSON('https://api.zippopotam.us/us/' + zip[1]);
+      const p = z.places[0];
+      return { lat: parseFloat(p.latitude), lon: parseFloat(p.longitude), name: p['place name'] + ', ' + p['state abbreviation'] + ' ' + zip[1] };
+    } catch (e) { /* fall through to general geocoder */ }
+  }
+
+  const g = await getJSON('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=' + encodeURIComponent(text));
+  if (!g.results || !g.results.length) throw new Error('Could not find "' + text + '". Try a ZIP, "lat, lon", or a place name.');
+  const r = g.results[0];
+  return { lat: r.latitude, lon: r.longitude, tz: r.timezone, name: [r.name, r.admin1, r.country].filter(Boolean).join(', ') };
+}
+
+async function resolveTimezone(loc) {
+  if (loc.tz) return loc.tz;
+  try {
+    const w = await getJSON('https://api.open-meteo.com/v1/forecast?daily=sunrise&forecast_days=1&timezone=auto&latitude=' + loc.lat + '&longitude=' + loc.lon);
+    if (w.timezone) return w.timezone;
+  } catch (e) { /* offline fallback */ }
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+function render(loc, tz, dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const day = solarDay(y, m, d, loc.lat, loc.lon);
+  const T = e => fmtTime(day.crossing(e, true), tz);
+  const S = e => fmtTime(day.crossing(e, false), tz);
+  const rows = [];
+
+  for (const [label, angles, a, b] of PHASES) {
+    const cls = label.startsWith('Bird') ? 'bird' : label.startsWith('Golden') ? 'gold' : '';
+    rows.push(`<tr class="${cls}"><td>${label}<small>${angles}</small></td>` +
+      `<td>${T(a)} – ${T(b)}</td><td>${S(b)} – ${S(a)}</td></tr>`);
+  }
+  const rise = day.crossing(SUN_ELEV, true), set = day.crossing(SUN_ELEV, false);
+  const bear = dt => { if (!dt) return ''; const a = sunPos(dt, loc.lat, loc.lon).az; return `<small>${compass(a)} ${Math.round(a)}°</small>`; };
+  rows.push(`<tr class="sun"><td>Sunrise / Sunset<small>compass bearing</small></td><td>${fmtTime(rise, tz)}${bear(rise)}</td><td>${fmtTime(set, tz)}${bear(set)}</td></tr>`);
+  const noonPos = sunPos(day.noon, loc.lat, loc.lon);
+  rows.push(`<tr class="sun"><td>Solar noon</td><td colspan="2">${fmtTime(day.noon, tz)}<small>${compass(noonPos.az)} ${Math.round(noonPos.az)}°, ${noonPos.alt.toFixed(0)}° high</small></td></tr>`);
+
+  let len = '—';
+  if (rise && set) { const mins = Math.round((set - rise) / 60000); len = Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm'; }
+
+  const tod = $('tod').value;
+  let atHtml = '';
+  if (tod) {
+    const [hh, mm] = tod.split(':').map(Number);
+    const when = localToDate(y, m, d, hh, mm, tz);
+    const sp = sunPos(when, loc.lat, loc.lon);
+    atHtml = `<tr class="hl"><td>Sun at ${fmtTime(when, tz)}</td><td colspan="2">${compass(sp.az)} ${Math.round(sp.az)}°, ${sp.alt >= 0 ? sp.alt.toFixed(1) + '° above horizon' : Math.abs(sp.alt).toFixed(1) + '° below horizon'}</td></tr>`;
+  }
+  $('rows').innerHTML = atHtml + rows.join('');
+  $('place').textContent = loc.name;
+  $('meta').textContent = `${dateStr} · ${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)} · ${tz} · daylight ${len}`;
+  $('result').hidden = false;
+}
+
+async function run() {
+  setStatus('Looking up location…');
+  try {
+    const key = $('preset').value;
+    const loc = PRESETS[key] || await resolveLocation($('loc').value);
+    const tz = await resolveTimezone(loc);
+    const dateStr = $('date').value;
+    if (!dateStr) throw new Error('Pick a date.');
+    render(loc, tz, dateStr);
+    setStatus('');
+    try { localStorage.setItem('lt-loc', $('loc').value); localStorage.setItem('lt-fmt', $('fmt').value); localStorage.setItem('lt-preset', key); } catch (e) {}
+    try { history.replaceState(null, '', '?preset=' + key + '&loc=' + encodeURIComponent($('loc').value) + '&date=' + dateStr); } catch (e) {}
+  } catch (e) {
+    $('result').hidden = true;
+    setStatus(e.message || String(e), true);
+  }
+}
+
+function syncPreset() { $('customBox').hidden = $('preset').value !== 'custom'; }
+$('preset').addEventListener('change', () => { syncPreset(); if ($('preset').value !== 'custom' || $('loc').value) run(); });
+$('form').addEventListener('submit', ev => { ev.preventDefault(); run(); });
+$('tod').addEventListener('change', () => { if (!$('result').hidden) run(); });
+$('fmt').addEventListener('change', () => { if (!$('result').hidden) run(); });
+
+$('gps').addEventListener('click', () => {
+  if (!navigator.geolocation) return setStatus('Geolocation is not available in this browser.', true);
+  setStatus('Getting your location…');
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = +pos.coords.latitude.toFixed(4), lon = +pos.coords.longitude.toFixed(4);
+      $('loc').value = lat + ', ' + lon;
+      $('preset').value = 'custom'; syncPreset();
+      run();
+    },
+    err => setStatus('Could not get location (' + err.message + '). Browsers often block this on plain http addresses other than localhost; type a ZIP or coordinates instead.', true),
+    { enableHighAccuracy: false, timeout: 10000 });
+});
+
+(function init() {
+  const p = new URLSearchParams(location.search);
+  const now = new Date();
+  const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  $('date').value = p.get('date') || today;
+  let saved = '', fmt = '12', preset = 'wc';
+  try { saved = localStorage.getItem('lt-loc') || ''; fmt = localStorage.getItem('lt-fmt') || '12'; preset = localStorage.getItem('lt-preset') || 'wc'; } catch (e) {}
+  $('fmt').value = fmt;
+  $('loc').value = p.get('loc') || saved;
+  preset = p.get('preset') || preset;
+  $('preset').value = [...$('preset').options].some(o => o.value === preset) ? preset : 'wc';
+  if ($('preset').value === 'custom' && !$('loc').value) $('preset').value = 'wc';
+  syncPreset();
+  run();
+})();
+</script>
+</body>
+</html>
