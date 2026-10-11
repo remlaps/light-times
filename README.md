@@ -17,7 +17,7 @@ It also shows sunrise and sunset (with compass bearings), solar noon and the sun
 
 ## Locations
 
-- Built-in presets, sorted alphabetically: Boston, Conowingo Dam, Denali National Park, Everglades National Park, Grand Teton National Park, Hawk Mountain, Miami, New York, Philadelphia, Valley Forge Park, and Yellowstone National Park. Edit the `PRESETS` object and the dropdown in `index.html` to add your own.
+- Built-in presets, sorted alphabetically: American Prairie Reserve (Buffalo Camp, Montana), Conowingo Dam, Danube Delta (Romania), Denali National Park, Everglades National Park, Galápagos Islands (Ecuador), Grand Teton National Park, Hawk Mountain, Kakadu National Park (Australia), Kaziranga National Park (India), Miami, New York, Pantanal (Brazil), Serengeti National Park (Tanzania), Valley Forge Park, and Yellowstone National Park. Edit the `PRESETS` object and the dropdown in `index.html` to add your own.
 - Or enter a US ZIP code, `latitude, longitude`, a place name, or a postal code.
 - Or tap "Use my current location".
 
