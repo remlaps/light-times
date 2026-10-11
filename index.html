@@ -40,15 +40,20 @@
   <form class="card" id="form">
     <label for="preset">Location</label>
     <select id="preset">
-      <option value="bos">Boston, MA</option>
+      <option value="apr">American Prairie Reserve, MT</option>
       <option value="cd">Conowingo Dam, MD</option>
+      <option value="dd">Danube Delta, Romania</option>
       <option value="den">Denali National Park, AK</option>
       <option value="eg">Everglades National Park, FL</option>
+      <option value="gal">Galápagos Islands, Ecuador</option>
       <option value="gt">Grand Teton National Park, WY</option>
       <option value="hm">Hawk Mountain, PA</option>
+      <option value="kak">Kakadu National Park, Australia</option>
+      <option value="kaz">Kaziranga National Park, India</option>
       <option value="mia">Miami, FL</option>
       <option value="nyc">New York, NY</option>
-      <option value="ph">Philadelphia, PA</option>
+      <option value="pan">Pantanal, Brazil</option>
+      <option value="ser">Serengeti National Park, Tanzania</option>
       <option value="vf">Valley Forge Park, PA</option>
       <option value="ys">Yellowstone National Park, WY</option>
       <option value="custom">Other (enter below)</option>
@@ -164,15 +169,20 @@ const PHASES = [
 
 // ---- UI ----
 const PRESETS = {
-  bos: { name: 'Boston, MA', lat: 42.3601, lon: -71.0589, tz: 'America/New_York' },
+  apr: { name: 'American Prairie Reserve (Buffalo Camp), MT', lat: 47.7631, lon: -107.7745, tz: 'America/Denver' },
   cd: { name: 'Conowingo Dam, MD', lat: 39.66, lon: -76.175, tz: 'America/New_York' },
+  dd: { name: 'Danube Delta, Romania', lat: 45.15, lon: 29.55, tz: 'Europe/Bucharest' },
   den: { name: 'Denali National Park, AK', lat: 63.7292, lon: -148.8963, tz: 'America/Anchorage' },
   eg: { name: 'Everglades National Park, FL', lat: 25.379, lon: -80.5851, tz: 'America/New_York' },
+  gal: { name: 'Galápagos Islands, Ecuador', lat: -0.7425, lon: -90.3028, tz: 'Pacific/Galapagos' },
   gt: { name: 'Grand Teton National Park, WY', lat: 43.7904, lon: -110.6818, tz: 'America/Denver' },
   hm: { name: 'Hawk Mountain Sanctuary, PA', lat: 40.6385, lon: -75.9998, tz: 'America/New_York' },
+  kak: { name: 'Kakadu National Park, Australia', lat: -12.6667, lon: 132.8833, tz: 'Australia/Darwin' },
+  kaz: { name: 'Kaziranga National Park, India', lat: 26.5775, lon: 93.1711, tz: 'Asia/Kolkata' },
   mia: { name: 'Miami, FL', lat: 25.7617, lon: -80.1918, tz: 'America/New_York' },
   nyc: { name: 'New York, NY', lat: 40.7128, lon: -74.006, tz: 'America/New_York' },
-  ph: { name: 'Philadelphia, PA', lat: 39.9526, lon: -75.1652, tz: 'America/New_York' },
+  pan: { name: 'Pantanal (Porto Jofre), Brazil', lat: -17.3333, lon: -56.7667, tz: 'America/Cuiaba' },
+  ser: { name: 'Serengeti National Park, Tanzania', lat: -2.4333, lon: 34.8167, tz: 'Africa/Dar_es_Salaam' },
   vf: { name: 'Valley Forge Park, PA', lat: 40.0983, lon: -75.4432, tz: 'America/New_York' },
   ys: { name: 'Yellowstone National Park, WY', lat: 44.428, lon: -110.5885, tz: 'America/Denver' },
 };
@@ -318,13 +328,13 @@ $('gps').addEventListener('click', () => {
   const now = new Date();
   const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
   $('date').value = p.get('date') || today;
-  let saved = '', fmt = '12', preset = 'ph';
-  try { saved = localStorage.getItem('lt-loc') || ''; fmt = localStorage.getItem('lt-fmt') || '12'; preset = localStorage.getItem('lt-preset') || 'ph'; } catch (e) {}
+  let saved = '', fmt = '12', preset = 'vf';
+  try { saved = localStorage.getItem('lt-loc') || ''; fmt = localStorage.getItem('lt-fmt') || '12'; preset = localStorage.getItem('lt-preset') || 'vf'; } catch (e) {}
   $('fmt').value = fmt;
   $('loc').value = p.get('loc') || saved;
   preset = p.get('preset') || preset;
-  $('preset').value = [...$('preset').options].some(o => o.value === preset) ? preset : 'ph';
-  if ($('preset').value === 'custom' && !$('loc').value) $('preset').value = 'ph';
+  $('preset').value = [...$('preset').options].some(o => o.value === preset) ? preset : 'vf';
+  if ($('preset').value === 'custom' && !$('loc').value) $('preset').value = 'vf';
   syncPreset();
   run();
 })();
